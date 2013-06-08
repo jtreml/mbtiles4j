@@ -27,32 +27,37 @@ public class TileServlet extends HttpServlet {
 		path = path.substring(1);
 		String[] split = path.split(Pattern.quote("/"));
 
-		if (split.length != 3) {
+		if (split.length != 4) {
 			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 
-		if (!split[2].toLowerCase().endsWith(".png")) {
+		if (!split[3].toLowerCase().endsWith(".png")) {
 			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 
-		split[2] = split[2].replace(".png", "");
+		split[3] = split[3].replace(".png", "");
+
+		MBTilesUtils mbtu = MBTilesUtils.getInstance(split[0]);
+		if (mbtu == null) {
+			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
 
 		int z;
 		int y;
 		int x;
-
 		try {
-			z = Integer.parseInt(split[0]);
-			y = Integer.parseInt(split[1]);
-			x = Integer.parseInt(split[2]);
+			z = Integer.parseInt(split[1]);
+			y = Integer.parseInt(split[2]);
+			x = Integer.parseInt(split[3]);
 		} catch (NumberFormatException e) {
 			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 
-		byte[] tile = MBTilesUtils.getInstance().getTiles(x, y, z);
+		byte[] tile = mbtu.getTiles(x, y, z);
 		if (tile == null) {
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			return;

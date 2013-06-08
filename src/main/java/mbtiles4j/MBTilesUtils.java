@@ -7,24 +7,29 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class MBTilesUtils {
 
-	private static MBTilesUtils instance;
+	private static final ConcurrentHashMap<String, MBTilesUtils> INSTANCES = new ConcurrentHashMap<String, MBTilesUtils>();
 
 	private final Connection conn;
 
 	private final PreparedStatement ps;
 
-	private MBTilesUtils() {
+	private MBTilesUtils(String db) {
 		try {
 			Class.forName("org.sqlite.JDBC");
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
 
-		String db = getDatabaseLocation();
 		if (db == null || !new File(db).exists()) {
 			throw new RuntimeException("No database");
 		}
@@ -44,7 +49,7 @@ public class MBTilesUtils {
 		}
 	}
 
-	static String getDatabaseLocation() {
+	static Map<String, String> getDatabases() {
 		Properties configuration = new Properties();
 		try {
 			configuration.load(MBTilesUtils.class.getClassLoader()
@@ -52,15 +57,27 @@ public class MBTilesUtils {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		return configuration.getProperty("tile-db");
-	}
 
-	public static MBTilesUtils getInstance() {
-		if (instance == null) {
-			instance = new MBTilesUtils();
+		HashMap<String, String> result = new HashMap<String, String>();
+
+		String dbs = configuration.getProperty("tile-dbs");
+		if (StringUtils.isEmpty(dbs)) {
+			return result;
 		}
 
-		return instance;
+		String[] split = dbs.split(Pattern.quote(","));
+		for (String entry : split) {
+			String path = configuration.getProperty(entry + ".path");
+			if (!StringUtils.isEmpty(path)) {
+				result.put(entry, path);
+			}
+		}
+
+		return result;
+	}
+
+	public static MBTilesUtils getInstance(String db) {
+		return INSTANCES.get(db);
 	}
 
 	public synchronized byte[] getTiles(int x, int y, int z) {
@@ -91,7 +108,7 @@ public class MBTilesUtils {
 		return null;
 	}
 
-	public synchronized void close() {
+	private synchronized void close() {
 		if (ps != null) {
 			try {
 				ps.close();
@@ -105,6 +122,21 @@ public class MBTilesUtils {
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+
+	public static void connect() {
+		Map<String, String> dbs = getDatabases();
+		for (String db : dbs.keySet()) {
+			if (!INSTANCES.containsKey(db)) {
+				INSTANCES.put(db, new MBTilesUtils(dbs.get(db)));
+			}
+		}
+	}
+
+	public static void disconnect() {
+		for (MBTilesUtils entry : INSTANCES.values()) {
+			entry.close();
 		}
 	}
 }

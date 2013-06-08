@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
@@ -16,18 +17,34 @@ public class MBTilesUtilsTest {
 
 	private static MBTilesUtils mbtu;
 
+	private static String path;
+
 	@BeforeClass
 	public static void extractTestDatabase() throws IOException {
-		String db = MBTilesUtils.getDatabaseLocation();
+		Map<String, String> dbs = MBTilesUtils.getDatabases();
+		Assert.assertTrue(dbs.size() == 1);
 
-		InputStream is = MBTilesUtilsTest.class.getResourceAsStream(db);
-		OutputStream os = new FileOutputStream(db);
-		IOUtils.copy(is, os);
-		os.flush();
-		os.close();
-		is.close();
+		String db = dbs.keySet().iterator().next();
+		path = dbs.get(db);
 
-		mbtu = MBTilesUtils.getInstance();
+		InputStream is = null;
+		OutputStream os = null;
+		try {
+			is = MBTilesUtilsTest.class.getResourceAsStream(path);
+			os = new FileOutputStream(path);
+			IOUtils.copy(is, os);
+			os.flush();
+		} finally {
+			if (os != null) {
+				os.close();
+			}
+			if (is != null) {
+				is.close();
+			}
+		}
+
+		MBTilesUtils.connect();
+		mbtu = MBTilesUtils.getInstance(db);
 	}
 
 	@Test
@@ -40,10 +57,8 @@ public class MBTilesUtilsTest {
 
 	@AfterClass
 	public static void deleteTestDatabase() {
-		mbtu.close();
-
-		String db = MBTilesUtils.getDatabaseLocation();
-		new File(db).delete();
+		MBTilesUtils.disconnect();
+		new File(path).delete();
 	}
 
 	private void check(int x, int y, int z) {
