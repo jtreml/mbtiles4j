@@ -50,8 +50,8 @@ public class TileServlet extends HttpServlet {
 		int x;
 		try {
 			z = Integer.parseInt(split[1]);
-			y = Integer.parseInt(split[2]);
-			x = Integer.parseInt(split[3]);
+			x = Integer.parseInt(split[2]);
+			y = Integer.parseInt(split[3]);
 		} catch (NumberFormatException e) {
 			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return;
