@@ -30,3 +30,18 @@ mvn package
 ```
 
 and deploy the ``mbtiles4j.war`` file found in ``target/`` to an application server of your choice.
+
+Usage Example (Leaflet)
+-----------------------
+
+This is an example of how to use the tile server as a source for a [Leaflet](http://leafletjs.com/)-based web app. Keep in mind that tiles are served according to [TMS](http://en.wikipedia.org/wiki/Tile_Map_Service) spec, i.e. you'll get a twisted map with mixed-up tiles unless you configure your maps solution accordingly.
+
+```javascript
+  <script src="leaflet.js"></script>
+  <script>
+    var map = L.map('map');
+    L.tileLayer('http://localhost:8080/mbtiles4j/db1/{z}/{x}/{y}.png', {
+      tms: true
+    }).addTo(map);
+  </script>
+```
